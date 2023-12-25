@@ -23,3 +23,6 @@ go.work
 *_templ.go
 /tmp/
 .air.toml
+
+node_modules/
+view/input.css
