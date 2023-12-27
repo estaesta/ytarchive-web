@@ -11,10 +11,8 @@ templ Index() {
 			<!--<script src="https://unpkg.com/alpinejs" defer></script>-->
 			<link rel="stylesheet" href="/static/output.css" type="text/css" media="all"/>
 		</head>
-		<body class="bg-base-100">
+		<body class="bg-base-200">
 			@bodyWithSidebar()
-			//@flowbitesSidebar()
-			// copyrigth footer
 		</body>
 	</html>
 }
@@ -33,7 +31,7 @@ templ bodyWithSidebar() {
   </div> 
   <div class="drawer-side">
     <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label> 
-    <ul class="menu p-4 w-80 min-h-full bg-base-200 text-base-content [&>li]:font-semibold [&>li]:text-xl">
+    <ul class="menu p-4 w-80 min-h-full bg-base-300 text-base-content [&>li]:font-semibold [&>li]:text-xl">
 		@logo()
       <!-- Sidebar content here -->
       <li><a>ytarchive-web</a></li>
@@ -66,21 +64,32 @@ templ mainContainer() {
 			<div class="flex justify-center mt-12">
 				@inputCard()
 			</div>
+			<div id="output"></div>
 		</div>
 		<footer class="text-center text-gray-500 text-sm h-fit ">
-			<p>© 2021 ddpaud</p>
+			<p>© 2024 ddpaud</p>
 		</footer>
 	</div>
 }
 
 templ inputCard() {
-	<div class="card bg-base-100 shadow-xl lg:w-3/4 mx-auto w-full">
-		<div class="card-body">
+	<div 
+		class="card bg-base-100 shadow-xl lg:w-3/4 mx-auto w-full"
+		>
+		<form class="card-body"
+			hx-post="/archive"
+			hx-swap="innerHTML"
+			hx-target="#output"
+		>
 			<h2 class="card-title">Youtube url</h2>
-			<input type="text" placeholder="Type here" class="input input-bordered input-primary w-full "/>
+			<input name="yt-url" id="yt-url" type="text" placeholder="Type here" class="input input-bordered input-primary w-full "/>
 			<div class="card-actions justify-center">
-				<button class="btn btn-primary">Archive!</button>
+				<button class="btn btn-primary" type="submit">Archive!</button>
 			</div>
-		</div>
+		</form>
 	</div>
+}
+
+templ Dummy(url string) {
+	{ url }
 }
