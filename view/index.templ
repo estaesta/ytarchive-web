@@ -8,6 +8,8 @@ templ Index() {
 			<meta name="viewport" content="width=device-width"/>
 			<title></title>
 			<script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
+			<script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
+
 			<!--<script src="https://unpkg.com/alpinejs" defer></script>-->
 			<link rel="stylesheet" href="/static/output.css" type="text/css" media="all"/>
 		</head>
@@ -18,27 +20,26 @@ templ Index() {
 }
 
 templ bodyWithSidebar() {
-<div class="drawer lg:drawer-open">
-  <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
-  <div class="drawer-content flex flex-col items-center justify-center min-h-svh">
-    <label for="my-drawer-2" class="px-6 pt-4 drawer-button lg:hidden self-start">
-		<svg class="w-6 h-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-			<path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
-		</svg>
-		</label>
-    <!-- Page content here -->
-		@mainContainer()
-  </div> 
-  <div class="drawer-side">
-    <label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label> 
-    <ul class="menu p-4 w-80 min-h-full bg-base-300 text-base-content [&>li]:font-semibold [&>li]:text-xl">
-		@logo()
-      <!-- Sidebar content here -->
-      <li><a>ytarchive-web</a></li>
-    </ul>
-  
-  </div>
-</div>
+	<div class="drawer lg:drawer-open">
+		<input id="my-drawer-2" type="checkbox" class="drawer-toggle"/>
+		<div class="drawer-content flex flex-col items-center justify-center min-h-svh">
+			<label for="my-drawer-2" class="px-6 pt-4 drawer-button lg:hidden self-start">
+				<svg class="w-6 h-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+					<path clip-rule="evenodd" fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"></path>
+				</svg>
+			</label>
+			<!-- Page content here -->
+			@mainContainer()
+		</div>
+		<div class="drawer-side">
+			<label for="my-drawer-2" aria-label="close sidebar" class="drawer-overlay"></label>
+			<ul class="menu p-4 w-80 min-h-full bg-base-300 text-base-content [&>li]:font-semibold [&>li]:text-xl">
+				@logo()
+				<!-- Sidebar content here -->
+				<li><a>ytarchive-web</a></li>
+			</ul>
+		</div>
+	</div>
 }
 
 templ logo() {
@@ -73,13 +74,13 @@ templ mainContainer() {
 }
 
 templ inputCard() {
-	<div 
+	<div
 		class="card bg-base-100 shadow-xl lg:w-3/4 mx-auto w-full"
-		>
-		<form class="card-body"
+	>
+		<form
+			class="card-body"
 			hx-post="/archive"
 			hx-swap="innerHTML"
-			hx-target="#output"
 		>
 			<h2 class="card-title">Youtube url</h2>
 			<input name="yt-url" id="yt-url" type="text" placeholder="Type here" class="input input-bordered input-primary w-full "/>
@@ -92,4 +93,27 @@ templ inputCard() {
 
 templ Dummy(url string) {
 	{ url }
+}
+
+templ CommandOutputHx(id string) {
+	<div 
+		id="sse-output"
+		hx-ext="sse"
+		sse-connect={"/archive/" + id}
+		sse-swap="archive-update"
+		class="font-mono text-sm text-gray-100"
+	>
+
+	</div>
+}
+
+templ CloseSse(url string) {
+	<a	href={ templ.SafeURL(url) }
+		target="_blank"
+		id="sse-output"
+		hx-swap-oob="true"
+		class="btn btn-primary w-fit"
+	>
+		Open
+	</a>
 }

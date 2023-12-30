@@ -26,3 +26,5 @@ go.work
 
 node_modules/
 view/input.css
+
+downloads/

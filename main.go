@@ -7,13 +7,18 @@ import (
 	"github.com/estaesta/ytarchive-web/utils"
 	"github.com/estaesta/ytarchive-web/view"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	// "github.com/labstack/echo/v4/middleware"
+	"github.com/nats-io/nats.go"
 )
 
 func main() {
+	nc, _ := nats.Connect(nats.DefaultURL)
+
+	defer nc.Drain()
+
 	e := echo.New()
 
-	e.Use(middleware.Logger())
+	// e.Use(middleware.Logger())
 	e.Static("/static", "assets")
 
 	component := view.Index()
@@ -22,7 +27,17 @@ func main() {
 		return utils.Render(c, http.StatusOK, component)
 	})
 
-	e.POST("/archive", handler.PostArchive)
+	postArchive := func(c echo.Context) error {
+		return handler.PostArchive(c, nc)
+	}
+	e.POST("/archive", postArchive)
+
+	getArchive := func(c echo.Context) error {
+		return handler.GetArchive(c, nc)
+	}
+	e.GET("/archive/:videoId", getArchive)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
+
+
