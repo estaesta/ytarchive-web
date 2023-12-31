@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/estaesta/ytarchive-web/handler"
 	"github.com/estaesta/ytarchive-web/utils"
@@ -31,8 +30,7 @@ func main() {
 	}()
 
 	js, _ := jetstream.New(nc)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	// create kv store
 	kv, _ := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{

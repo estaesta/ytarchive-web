@@ -9,7 +9,6 @@ templ Index() {
 			<title></title>
 			<script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
 			<script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
-
 			<!--<script src="https://unpkg.com/alpinejs" defer></script>-->
 			<link rel="stylesheet" href="/static/output.css" type="text/css" media="all"/>
 		</head>
@@ -82,10 +81,12 @@ templ inputCard() {
 			hx-post="/archive"
 			hx-swap="innerHTML"
 		>
-			<h2 class="card-title">Youtube url</h2>
-			<input name="yt-url" id="yt-url" type="text" placeholder="Type here" class="input input-bordered input-primary w-full "/>
-			<div class="card-actions justify-center">
-				<button class="btn btn-primary" type="submit">Archive!</button>
+			<div class="output">
+				<h2 class="card-title">Youtube url</h2>
+				<input name="yt-url" id="yt-url" type="text" placeholder="Type here" class="input input-bordered input-primary w-full "/>
+				<div class="card-actions justify-center">
+					<button class="btn btn-primary" type="submit">Archive!</button>
+				</div>
 			</div>
 		</form>
 	</div>
@@ -96,21 +97,20 @@ templ Dummy(url string) {
 }
 
 templ CommandOutputHx(id string) {
-	<div 
-		id="sse-output"
+	<div
+		id="output"
 		hx-ext="sse"
-		sse-connect={"/archive/" + id}
+		sse-connect={ "/archive/" + id }
 		sse-swap="archive-update"
 		class="font-mono text-sm text-gray-100"
-	>
-
-	</div>
+	></div>
 }
 
 templ CloseSse(url string) {
-	<a	href={ templ.SafeURL(url) }
+	<a
+		href={ templ.SafeURL(url) }
 		target="_blank"
-		id="sse-output"
+		id="output"
 		hx-swap-oob="true"
 		class="btn btn-primary w-fit"
 	>

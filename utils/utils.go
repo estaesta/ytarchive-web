@@ -60,10 +60,10 @@ func DownloadVideo(url string, directory string) chan string {
 	// execute yt-dlp using goroutine
 	go func() {
 		// cmd := exec.Command("yt-dlp", "-o", directory+"/%(title)s.%(ext)s", url)
-		// cmd := exec.Command("./counter")
-		cmd := exec.Command(
-			"ytarchive", "-v", "-o", directory+"/%(title)s.%(ext)s",
-			"--add-metadata", "-merge", "-w", url, "best")
+		cmd := exec.Command("./counter")
+		// cmd := exec.Command(
+		// 	"ytarchive", "-v", "-o", directory+"/%(title)s.%(ext)s",
+		// 	"--add-metadata", "-merge", "-w", url, "best")
 
 		defer close(outchan)
 		stdout, err := cmd.StdoutPipe()

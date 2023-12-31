@@ -13,12 +13,10 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-// var (
-// 	keyStatusMap = make(map[string]bool)
-// 	mu           sync.Mutex
-// )
-
 func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	// get the url from the form
 	url := c.FormValue("yt-url")
 	if url == "" {
 		fmt.Println("url is empty")
@@ -33,23 +31,22 @@ func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx conte
 		return c.String(http.StatusBadRequest, "failed to parse url")
 	}
 
+	// if value is already in the kv store with value other than "downloading", return the url to the client
+	value, err := kv.Get(ctx, "id."+videoID)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if value != nil && string(value.Value()) != "downloading" {
+		fmt.Println("video is already downloaded")
+		return utils.Render(c, http.StatusOK, view.CloseSse("https://gofile.io/d/123456"))
+	}
+
 	// if the video id is already in the kv store, return the url to the client
 	_, err = kv.Create(ctx, "id."+videoID, []byte("downloading"))
 	if err != nil {
-		if err == jetstream.ErrKeyExists {
-			return utils.Render(c, http.StatusOK, view.CommandOutputHx(videoID))
-		}
-		return c.String(http.StatusInternalServerError, "failed to create kv")
+		fmt.Println(err)
+		return utils.Render(c, http.StatusOK, view.CommandOutputHx(videoID))
 	}
-
-	// check if the video id is already in the map
-	// mu.Lock()
-	// defer mu.Unlock()
-	// if _, ok := keyStatusMap[videoID]; ok {
-	// 	fmt.Println("video id already exists")
-	// 	return utils.Render(c, http.StatusOK, view.CommandOutputHx(videoID))
-	// }
-	// keyStatusMap[videoID] = true
 
 	fmt.Println("publishing to the topic:", videoID)
 
