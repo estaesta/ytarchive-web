@@ -2,16 +2,35 @@ package utils
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/a-h/templ"
 	"github.com/labstack/echo/v4"
 )
+
+type gofileResponse struct {
+	Status string `json:"status"`
+	Data   struct {
+		DownloadPage string `json:"downloadPage"`
+		Code         string `json:"code"`
+		ParentFolder string `json:"parentFolder"`
+		FileID       string `json:"fileId"`
+		FileName     string `json:"fileName"`
+		MD5          string `json:"md5"`
+	} `json:"data"`
+}
 
 func Render(ctx echo.Context, status int, t templ.Component) error {
 	ctx.Response().Writer.WriteHeader(status)
@@ -42,14 +61,88 @@ func RenderStream(ctx echo.Context, t templ.Component, event string) error {
 	return nil
 }
 
+func curlGofile(path string, server string) (gofileResponse, error) {
+	var response gofileResponse
+	// curl -F "file=@someFile" https://store1.gofile.io/upload
+	// copied from curlconverter.com
+	form := new(bytes.Buffer)
+	writer := multipart.NewWriter(form)
+	fw, err := writer.CreateFormFile("file", filepath.Base(path))
+	if err != nil {
+		log.Fatal(err)
+		return gofileResponse{}, err
+	}
+	fd, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+		return gofileResponse{}, err
+	}
+	defer fd.Close()
+	_, err = io.Copy(fw, fd)
+	if err != nil {
+		log.Fatal(err)
+		return gofileResponse{}, err
+	}
+
+	writer.Close()
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST",
+		fmt.Sprintf("https://%s.gofile.io/upload", server), form)
+	if err != nil {
+		log.Fatal(err)
+		return gofileResponse{}, err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		return gofileResponse{}, err
+	}
+	defer resp.Body.Close()
+	bodyText, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+		return gofileResponse{}, err
+	}
+	fmt.Printf("%s\n", bodyText)
+	// unmarshal the response
+	err = json.Unmarshal(bodyText, &response)
+	if err != nil {
+		log.Fatal(err)
+		return gofileResponse{}, err
+	}
+
+	return response, nil
+}
+
 // Upload the downloaded directory to Gofile
-func UploadToGofile(path string) error {
+func UploadToGofile(dirPath string) (string, error) {
 	// remove the directory after uploading
-	// defer os.RemoveAll(path)
+	defer os.RemoveAll(dirPath)
 
-	// TODO: upload the directory to Gofile using the API
+	// upload the file in the directory to Gofile
+	// the directory only contains one file
+	// the name of the file is unknown
+	entry, err := os.ReadDir(dirPath)
+	if err != nil {
+		fmt.Println("failed to read directory")
+		return "", err
+	}
 
-	return nil
+	// get the path of the file
+	filePath := filepath.Join(dirPath, entry[0].Name())
+
+	// upload the file to Gofile
+	response, err := curlGofile(filePath, "store11")
+	if err != nil {
+		fmt.Println("failed to upload to Gofile")
+		return "", err
+	}
+
+	downloadPage := response.Data.DownloadPage
+
+	return downloadPage, nil
 }
 
 // Run yt-dlp to download the video concurrently
