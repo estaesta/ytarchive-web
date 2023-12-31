@@ -117,8 +117,8 @@ func GetArchive(c echo.Context, nc *nats.Conn) error {
 	//dummy upload by sending progress to the client
 	for i := 0; i < 100; i++ {
 		event := "archive-update"
-		data := fmt.Sprintf("uploading to Gofile: %d%%", i)
-		fmt.Fprintf(c.Response().Writer, "event: %s\ndata: dummy upload progress\n%s\n\n", event, data)
+		data := fmt.Sprintf("dummy uploading to Gofile: %d%%", i)
+		fmt.Fprintf(c.Response().Writer, "event: %s\ndata: %s\n\n", event, data)
 		c.Response().Flush()
 		time.Sleep(100 * time.Millisecond)
 	}

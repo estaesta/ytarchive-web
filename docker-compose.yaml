@@ -1,0 +1,28 @@
+# run built image and nats server in docker
+version: '3.7'
+
+services:
+  go-app:
+    image: go-app
+    container_name: go-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - nats-server
+    networks:
+      - go-app-network
+  
+  nats-server:
+    image: nats:latest
+    container_name: nats-server
+    ports:
+      - "4222:4222"
+    networks:
+      - go-app-network
+
+networks:
+  go-app-network:
+    driver: bridge
