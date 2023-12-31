@@ -88,15 +88,24 @@ func DownloadVideo(url string, directory string) chan string {
 }
 
 // Parse the url to get the video id
-func ParseURL(youtubeUrl string) (string, error) {
+// yt format is https://www.youtube.com/watch?v=videoID
+// or https://youtu.be/videoID
+func ParseYtURL(youtubeUrl string) (string, error) {
 	u, err := url.Parse(youtubeUrl)
 	if err != nil {
 		return "", err
 	}
 
-	query := u.Query()
-	videoID := query.Get("v")
-	return videoID, nil
+	switch u.Host {
+	case "youtu.be":
+		return u.Path[1:], nil
+	case "www.youtube.com":
+		query := u.Query()
+		videoID := query.Get("v")
+		return videoID, nil
+	default:
+		return "", fmt.Errorf("invalid youtube url")
+	}
 }
 
 // split fuction to split \r or \n
@@ -105,15 +114,12 @@ func SplitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		return 0, nil, nil
 	}
 
-	// if i := findEOL(data); i >= 0 {
-	// 	// we have a full newline-terminated line.
-	// 	return i + 1, dropCR(data[0:i]), nil
-	// }
+	// if we have a \r or \n, return the line
 	if i := strings.Index(string(data), "\r"); i >= 0 {
-        return i + 1, data[0:i], nil
-    }
+		return i + 1, data[0:i], nil
+	}
 	if i := strings.Index(string(data), "\n"); i >= 0 {
-        return i + 1, data[0:i], nil
+		return i + 1, data[0:i], nil
 	}
 
 	// if we're at EOF, we have a final, non-terminated line. Return it.
@@ -124,19 +130,3 @@ func SplitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	// Request more data.
 	return 0, nil, nil
 }
-
-// func findEOL(data []byte) int {
-// 	for i, b := range data {
-// 		if b == '\n' {
-// 			return i
-// 		}
-// 	}
-// 	return -1
-// }
-//
-// func dropCR(data []byte) []byte {
-// 	if len(data) > 0 && data[len(data)-1] == '\r' { // remove \r
-// 		return data[0 : len(data)-1]
-// 	}
-// 	return data
-// }

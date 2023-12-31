@@ -26,7 +26,7 @@ func PostArchive(c echo.Context, nc *nats.Conn) error {
 	fmt.Println(url)
 
 	//parse the url to get the video id
-	videoID, err := utils.ParseURL(url)
+	videoID, err := utils.ParseYtURL(url)
 	if err != nil {
 		fmt.Println("failed to parse url")
 		return c.String(http.StatusBadRequest, "failed to parse url")
