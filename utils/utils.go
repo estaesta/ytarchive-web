@@ -18,7 +18,10 @@ func Render(ctx echo.Context, status int, t templ.Component) error {
 
 	err := t.Render(context.Background(), ctx.Response().Writer)
 	if err != nil {
-		return ctx.String(http.StatusInternalServerError, "failed to render response template")
+		return ctx.String(
+			http.StatusInternalServerError,
+			"failed to render response template",
+		)
 	}
 
 	return nil
@@ -27,10 +30,14 @@ func Render(ctx echo.Context, status int, t templ.Component) error {
 func RenderStream(ctx echo.Context, t templ.Component, event string) error {
 	html, err := templ.ToGoHTML(context.Background(), t)
 	if err != nil {
-		return ctx.String(http.StatusInternalServerError, "failed to render response template")
+		return ctx.String(
+			http.StatusInternalServerError,
+			"failed to render response template",
+		)
 	}
 
-	fmt.Fprintf(ctx.Response().Writer, "event: %s\ndata: %s\n\n", event, html)
+	fmt.Fprintf(ctx.Response().Writer,
+		"event: %s\ndata: %s\n\n", event, html)
 
 	return nil
 }
@@ -40,7 +47,7 @@ func UploadToGofile(path string) error {
 	// remove the directory after uploading
 	// defer os.RemoveAll(path)
 
-	//TODO: upload the directory to Gofile using the API
+	// TODO: upload the directory to Gofile using the API
 
 	return nil
 }
@@ -52,8 +59,11 @@ func DownloadVideo(url string, directory string) chan string {
 
 	// execute yt-dlp using goroutine
 	go func() {
-		cmd := exec.Command("yt-dlp", "-o", directory+"/%(title)s.%(ext)s", url)
+		// cmd := exec.Command("yt-dlp", "-o", directory+"/%(title)s.%(ext)s", url)
 		// cmd := exec.Command("./counter")
+		cmd := exec.Command(
+			"ytarchive", "-v", "-o", directory+"/%(title)s.%(ext)s",
+			"--add-metadata", "-merge", "-w", url, "best")
 
 		defer close(outchan)
 		stdout, err := cmd.StdoutPipe()
@@ -70,7 +80,6 @@ func DownloadVideo(url string, directory string) chan string {
 		scanner.Split(SplitFunc)
 		for scanner.Scan() {
 			outchan <- scanner.Text()
-			// fmt.Println(scanner.Text())
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -79,8 +88,15 @@ func DownloadVideo(url string, directory string) chan string {
 
 		fmt.Println("finished reading stdout")
 
-		cmd.Wait()
-		stdout.Close()
+		err = cmd.Wait()
+		if err != nil {
+			fmt.Println("failed to wait for yt-dlp")
+		}
+
+		err = stdout.Close()
+		if err != nil {
+			fmt.Println("failed to close stdout")
+		}
 
 		outchan <- "finished downloading"
 	}()

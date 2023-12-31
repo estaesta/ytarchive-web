@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/estaesta/ytarchive-web/handler"
 	"github.com/estaesta/ytarchive-web/utils"
 	"github.com/estaesta/ytarchive-web/view"
 	"github.com/labstack/echo/v4"
+
 	// "github.com/labstack/echo/v4/middleware"
 	"github.com/nats-io/nats.go"
 )
@@ -14,7 +16,12 @@ import (
 func main() {
 	nc, _ := nats.Connect(nats.DefaultURL)
 
-	defer nc.Drain()
+	defer func() {
+		err := nc.Drain()
+		if err != nil {
+			fmt.Println("failed to drain the connection")
+		}
+	}()
 
 	e := echo.New()
 
@@ -39,5 +46,3 @@ func main() {
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
-
-

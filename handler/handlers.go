@@ -25,7 +25,7 @@ func PostArchive(c echo.Context, nc *nats.Conn) error {
 	}
 	fmt.Println(url)
 
-	//parse the url to get the video id
+	// parse the url to get the video id
 	videoID, err := utils.ParseYtURL(url)
 	if err != nil {
 		fmt.Println("failed to parse url")
@@ -41,8 +41,7 @@ func PostArchive(c echo.Context, nc *nats.Conn) error {
 	}
 	keyStatusMap[videoID] = true
 
-	nc.Publish(videoID, []byte("start downloading"))
-	fmt.Println("published to the topic:", videoID)
+	fmt.Println("publishing to the topic:", videoID)
 
 	outchan := make(chan string, 1)
 
@@ -59,8 +58,10 @@ func PostArchive(c echo.Context, nc *nats.Conn) error {
 			delete(keyStatusMap, videoID)
 		}()
 		for msg := range outchan {
-			// fmt.Println("sending message:", msg)
-			nc.Publish(videoID, []byte(msg))
+			err := nc.Publish(videoID, []byte(msg))
+			if err != nil {
+				fmt.Println("failed to publish to the topic" + videoID)
+			}
 		}
 	}()
 
@@ -80,10 +81,19 @@ func GetArchive(c echo.Context, nc *nats.Conn) error {
 	sub, err := nc.ChanSubscribe(videoID, msgChan)
 	if err != nil {
 		fmt.Println("failed to subscribe to the topic")
-		return c.String(http.StatusInternalServerError, "failed to subscribe to the topic")
+		return c.String(
+			http.StatusInternalServerError,
+			"failed to subscribe to the topic",
+		)
 	}
 	fmt.Println("subscribed to the topic:", videoID)
-	defer sub.Unsubscribe()
+	// defer sub.Unsubscribe()
+	defer func() {
+		err := sub.Unsubscribe()
+		if err != nil {
+			fmt.Println("failed to unsubscribe")
+		}
+	}()
 	defer close(msgChan)
 
 	// send sse to the client
@@ -93,7 +103,7 @@ func GetArchive(c echo.Context, nc *nats.Conn) error {
 
 	fmt.Println("waiting for message")
 
-	breakLoop:
+breakLoop:
 	for {
 		select {
 		case msg := <-msgChan:
@@ -114,7 +124,7 @@ func GetArchive(c echo.Context, nc *nats.Conn) error {
 	// path := fmt.Sprintf("downloads/%s", videoID)
 	// go utils.UploadToGofile(path)
 
-	//dummy upload by sending progress to the client
+	// dummy upload by sending progress to the client
 	for i := 0; i < 100; i++ {
 		event := "archive-update"
 		data := fmt.Sprintf("dummy uploading to Gofile: %d%%", i)
