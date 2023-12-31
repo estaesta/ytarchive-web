@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/estaesta/ytarchive-web/handler"
 	"github.com/estaesta/ytarchive-web/utils"
@@ -11,11 +13,16 @@ import (
 
 	// "github.com/labstack/echo/v4/middleware"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
 func main() {
-	nc, _ := nats.Connect(nats.DefaultURL)
+	e := echo.New()
 
+	nc, err := nats.Connect(nats.DefaultURL)
+	if err != nil {
+		fmt.Println("failed to connect to nats server")
+	}
 	defer func() {
 		err := nc.Drain()
 		if err != nil {
@@ -23,7 +30,14 @@ func main() {
 		}
 	}()
 
-	e := echo.New()
+	js, _ := jetstream.New(nc)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// create kv store
+	kv, _ := js.CreateKeyValue(ctx, jetstream.KeyValueConfig{
+		Bucket: "videoStatus",
+	})
 
 	// e.Use(middleware.Logger())
 	e.Static("/static", "assets")
@@ -35,7 +49,7 @@ func main() {
 	})
 
 	postArchive := func(c echo.Context) error {
-		return handler.PostArchive(c, nc)
+		return handler.PostArchive(c, nc, kv, ctx)
 	}
 	e.POST("/archive", postArchive)
 

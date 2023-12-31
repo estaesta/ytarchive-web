@@ -1,23 +1,24 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/estaesta/ytarchive-web/utils"
 	"github.com/estaesta/ytarchive-web/view"
 	"github.com/labstack/echo/v4"
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
-var (
-	keyStatusMap = make(map[string]bool)
-	mu           sync.Mutex
-)
+// var (
+// 	keyStatusMap = make(map[string]bool)
+// 	mu           sync.Mutex
+// )
 
-func PostArchive(c echo.Context, nc *nats.Conn) error {
+func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx context.Context) error {
 	url := c.FormValue("yt-url")
 	if url == "" {
 		fmt.Println("url is empty")
@@ -32,14 +33,23 @@ func PostArchive(c echo.Context, nc *nats.Conn) error {
 		return c.String(http.StatusBadRequest, "failed to parse url")
 	}
 
-	// check if the video id is already in the map
-	mu.Lock()
-	defer mu.Unlock()
-	if _, ok := keyStatusMap[videoID]; ok {
-		fmt.Println("video id already exists")
-		return utils.Render(c, http.StatusOK, view.CommandOutputHx(videoID))
+	// if the video id is already in the kv store, return the url to the client
+	_, err = kv.Create(ctx, "id."+videoID, []byte("downloading"))
+	if err != nil {
+		if err == jetstream.ErrKeyExists {
+			return utils.Render(c, http.StatusOK, view.CommandOutputHx(videoID))
+		}
+		return c.String(http.StatusInternalServerError, "failed to create kv")
 	}
-	keyStatusMap[videoID] = true
+
+	// check if the video id is already in the map
+	// mu.Lock()
+	// defer mu.Unlock()
+	// if _, ok := keyStatusMap[videoID]; ok {
+	// 	fmt.Println("video id already exists")
+	// 	return utils.Render(c, http.StatusOK, view.CommandOutputHx(videoID))
+	// }
+	// keyStatusMap[videoID] = true
 
 	fmt.Println("publishing to the topic:", videoID)
 
@@ -53,9 +63,9 @@ func PostArchive(c echo.Context, nc *nats.Conn) error {
 
 	go func() {
 		defer func() {
-			mu.Lock()
-			defer mu.Unlock()
-			delete(keyStatusMap, videoID)
+			// mu.Lock()
+			// defer mu.Unlock()
+			// delete(keyStatusMap, videoID)
 		}()
 		for msg := range outchan {
 			err := nc.Publish(videoID, []byte(msg))
