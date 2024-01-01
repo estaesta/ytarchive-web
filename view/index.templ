@@ -119,6 +119,7 @@ templ GofileOpenButton(url string) {
 		>
 			Open
 		</a>
+		@BackButton()
 	</div>
 }
 
@@ -128,5 +129,15 @@ templ GofileFailed() {
 		hx-swap-oob="true"
 	>
 		<h3 class="text-center text-xl">Failed to upload to gofile</h3>
+		@BackButton()
 	</div>
+}
+
+templ BackButton() {
+	<a
+		href="/"
+		class="btn btn-primary w-fit mx-auto my-4 flex"
+	>
+		Back
+	</a>
 }

@@ -159,12 +159,12 @@ func UploadToGofile(dirPath string) (string, error) {
 // Run yt-dlp to download the video concurrently
 // save the stdout to a buffer channel
 // ytarchive -v -o "archive/%(id)s/[[%(upload_date)s]_%(title)s(%(id)s)" --add-metadata -merge -w https://www.youtube.com/watch\?v\=videoId best
-func DownloadVideo(url string, directory string, outchan chan string) {
-	cmd := exec.Command("yt-dlp", "-o", directory+"/%(id)s/%(title)s.%(ext)s", url)
+func DownloadVideo(url string, directory string, outchan chan string) error {
+	// cmd := exec.Command("yt-dlp", "-o", directory+"/%(id)s/%(title)s.%(ext)s", url)
 	// cmd := exec.Command("./counter")
-	// cmd := exec.Command(
-	// 	"ytarchive", "-v", "-o", directory+"/%(title)s.%(ext)s",
-	// 	"--add-metadata", "-merge", "-w", url, "best")
+	cmd := exec.Command(
+		"ytarchive", "-v", "-o", directory+"/%(id)s/[[%(upload_date)s]_%(title)s(%(id)s)",
+		"--add-metadata", "-merge", "-w", url, "best")
 
 	// defer close(outchan)
 	stdout, err := cmd.StdoutPipe()
@@ -174,7 +174,7 @@ func DownloadVideo(url string, directory string, outchan chan string) {
 
 	err = cmd.Start()
 	if err != nil {
-		fmt.Println("failed to execute yt-dlp")
+		fmt.Println("failed to execute yt-archive")
 	}
 
 	scanner := bufio.NewScanner(stdout)
@@ -191,8 +191,10 @@ func DownloadVideo(url string, directory string, outchan chan string) {
 
 	err = cmd.Wait()
 	if err != nil {
-		fmt.Println("failed to wait for yt-dlp")
+		fmt.Println("failed to wait for yt-archive")
+		return err
 	}
+	return nil
 }
 
 // Parse the url to get the video id

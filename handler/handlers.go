@@ -54,7 +54,20 @@ func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx conte
 
 	go func() {
 		// execute yt-dlp using goroutine
-		utils.DownloadVideo(url, "downloads", outchan)
+		err := utils.DownloadVideo(url, "downloads", outchan)
+		if err != nil {
+			fmt.Println("failed to download video")
+			outchan <- "Failed to download video. The stream might be ended. Use yt-dlp instead."
+			// delete the value in the kv store
+			ctxDelete, cancelDelete := context.WithTimeout(ctx, 10*time.Second)
+			defer cancelDelete()
+			err = kv.Delete(ctxDelete, "id."+videoID)
+			if err != nil {
+				fmt.Println("failed to delete the value in the kv store")
+				fmt.Println(err)
+			}
+			return
+		}
 		outchan <- "finished downloading"
 		// UploadToGofile
 		outURL, err := utils.UploadToGofile("downloads/" + videoID)
