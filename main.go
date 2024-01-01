@@ -48,7 +48,7 @@ func main() {
 	})
 
 	// e.Use(middleware.Logger())
-	e.Use(middleware.HTTPSWWWRedirect())
+	e.Pre(middleware.HTTPSRedirect())
 	e.Static("/static", "assets")
 
 	component := view.Index()
