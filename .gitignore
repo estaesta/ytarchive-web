@@ -20,7 +20,7 @@
 # Go workspace file
 go.work
 
-*_templ.go
+# *_templ.go
 /tmp/
 .air.toml
 
