@@ -9,7 +9,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "1323:1323"
+      - "443:443"
     environment:
       - NATS_URL=nats://nats-server:4222
       - DOMAIN=<your domain>
