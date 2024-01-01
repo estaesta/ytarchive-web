@@ -10,9 +10,9 @@ import (
 	"github.com/estaesta/ytarchive-web/utils"
 	"github.com/estaesta/ytarchive-web/view"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"golang.org/x/crypto/acme/autocert"
 
-	// "github.com/labstack/echo/v4/middleware"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -48,6 +48,7 @@ func main() {
 	})
 
 	// e.Use(middleware.Logger())
+	e.Use(middleware.HTTPSWWWRedirect())
 	e.Static("/static", "assets")
 
 	component := view.Index()
@@ -67,5 +68,5 @@ func main() {
 	e.GET("/archive/:videoId", getArchive)
 
 	// e.Logger.Fatal(e.Start(":1323"))
-	e.Logger.Fatal(e.StartAutoTLS(":1323"))
+	e.Logger.Fatal(e.StartAutoTLS(":443"))
 }

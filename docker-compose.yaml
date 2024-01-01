@@ -22,8 +22,6 @@ services:
     image: nats:latest
     container_name: nats-server
     command: ["--js"]
-    ports:
-      - "4222:4222"
     networks:
       - go-app-network
 
