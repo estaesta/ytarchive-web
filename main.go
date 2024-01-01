@@ -10,6 +10,7 @@ import (
 	"github.com/estaesta/ytarchive-web/utils"
 	"github.com/estaesta/ytarchive-web/view"
 	"github.com/labstack/echo/v4"
+	"golang.org/x/crypto/acme/autocert"
 
 	// "github.com/labstack/echo/v4/middleware"
 	"github.com/nats-io/nats.go"
@@ -18,8 +19,9 @@ import (
 
 func main() {
 	e := echo.New()
-	// e.AutoTLSManager.HostPolicy = autocert.HostWhitelist("localhost")
-	// e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
+	domain := os.Getenv("DOMAIN")
+	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(domain)
+	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
 
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
@@ -64,6 +66,6 @@ func main() {
 	}
 	e.GET("/archive/:videoId", getArchive)
 
-	e.Logger.Fatal(e.Start(":1323"))
-	// e.Logger.Fatal(e.StartAutoTLS(":1323"))
+	// e.Logger.Fatal(e.Start(":1323"))
+	e.Logger.Fatal(e.StartAutoTLS(":1323"))
 }
