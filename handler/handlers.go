@@ -32,7 +32,7 @@ func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx conte
 	}
 
 	// if value is already in the kv store with value other than "downloading", return the url to the client
-	value, err := kv.Get(ctx, "id."+videoID)
+	value, err := kv.Get(ctxCreate, "id."+videoID)
 	if err != nil {
 		fmt.Println(err)
 	}

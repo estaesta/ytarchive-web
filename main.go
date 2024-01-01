@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/estaesta/ytarchive-web/handler"
 	"github.com/estaesta/ytarchive-web/utils"
@@ -17,8 +18,15 @@ import (
 
 func main() {
 	e := echo.New()
+	// e.AutoTLSManager.HostPolicy = autocert.HostWhitelist("localhost")
+	// e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
 
-	nc, err := nats.Connect(nats.DefaultURL)
+	natsURL := os.Getenv("NATS_URL")
+	if natsURL == "" {
+		natsURL = nats.DefaultURL
+	}
+
+	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		fmt.Println("failed to connect to nats server")
 	}
@@ -57,4 +65,5 @@ func main() {
 	e.GET("/archive/:videoId", getArchive)
 
 	e.Logger.Fatal(e.Start(":1323"))
+	// e.Logger.Fatal(e.StartAutoTLS(":1323"))
 }
