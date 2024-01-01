@@ -102,6 +102,7 @@ templ CommandOutputHx(id string) {
 		hx-ext="sse"
 		sse-connect={ "/archive/" + id }
 		sse-swap="archive-update"
+		hx-swap-oob="true"
 		class="font-mono text-sm text-gray-100"
 	></div>
 }

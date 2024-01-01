@@ -19,6 +19,7 @@ import (
 
 func main() {
 	e := echo.New()
+
 	domain := os.Getenv("DOMAIN")
 	e.AutoTLSManager.HostPolicy = autocert.HostWhitelist(domain)
 	e.AutoTLSManager.Cache = autocert.DirCache("/var/www/.cache")
@@ -48,6 +49,7 @@ func main() {
 	})
 
 	// e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 	e.Pre(middleware.HTTPSRedirect())
 	e.Static("/static", "assets")
 
@@ -71,4 +73,6 @@ func main() {
 		e.Logger.Fatal(e.Start(":80"))
 	}()
 	e.Logger.Fatal(e.StartAutoTLS(":443"))
+
+	// e.Logger.Fatal(e.Start(":1323"))
 }

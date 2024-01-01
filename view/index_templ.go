@@ -320,7 +320,7 @@ func CommandOutputHx(id string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" sse-swap=\"archive-update\" class=\"font-mono text-sm text-gray-100\"></div>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" sse-swap=\"archive-update\" hx-swap-oob=\"true\" class=\"font-mono text-sm text-gray-100\"></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
