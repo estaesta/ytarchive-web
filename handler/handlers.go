@@ -14,8 +14,8 @@ import (
 )
 
 func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
+	ctxCreate, cancelCreate := context.WithTimeout(ctx, 10*time.Second)
+	defer cancelCreate()
 	// get the url from the form
 	url := c.FormValue("yt-url")
 	if url == "" {
@@ -38,11 +38,11 @@ func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx conte
 	}
 	if value != nil && string(value.Value()) != "downloading" {
 		fmt.Println("video is already downloaded")
-		return utils.Render(c, http.StatusOK, view.CloseSse("https://gofile.io/d/123456"))
+		return utils.Render(c, http.StatusOK, view.GofileOpenButton(string(value.Value())))
 	}
 
 	// if the video id is already in the kv store, return the url to the client
-	_, err = kv.Create(ctx, "id."+videoID, []byte("downloading"))
+	_, err = kv.Create(ctxCreate, "id."+videoID, []byte("downloading"))
 	if err != nil {
 		fmt.Println(err)
 		return utils.Render(c, http.StatusOK, view.CommandOutputHx(videoID))
@@ -52,17 +52,35 @@ func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx conte
 
 	outchan := make(chan string, 1)
 
-	// execute yt-dlp using goroutine
-	outchan = utils.DownloadVideo(url, "downloads")
+	go func() {
+		// execute yt-dlp using goroutine
+		utils.DownloadVideo(url, "downloads", outchan)
+		outchan <- "finished downloading"
+		// UploadToGofile
+		outURL, err := utils.UploadToGofile("downloads/" + videoID)
+		if err != nil {
+			fmt.Println("failed to upload to gofile")
+			outchan <- "failed to upload to gofile"
+			return
+		}
+		// update the value in the kv store to the url
+		ctxPut, cancelPut := context.WithTimeout(ctx, 10*time.Second)
+		defer cancelPut()
 
-	// TODO: upload the downloaded directory to Gofile using the API
-	// use dummy api for now
+		_, err = kv.Put(ctxPut, "id."+videoID, []byte(outURL))
+		if err != nil {
+			fmt.Println("failed to update the value in the kv store")
+			fmt.Println(err)
+			outchan <- "failed to update the value in the kv store"
+			return
+		}
+
+		outchan <- "end of process"
+	}()
 
 	go func() {
 		defer func() {
-			// mu.Lock()
-			// defer mu.Unlock()
-			// delete(keyStatusMap, videoID)
+			defer close(outchan)
 		}()
 		for msg := range outchan {
 			err := nc.Publish(videoID, []byte(msg))
@@ -76,7 +94,7 @@ func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx conte
 	return utils.Render(c, http.StatusOK, view.CommandOutputHx(videoID))
 }
 
-func GetArchive(c echo.Context, nc *nats.Conn) error {
+func GetArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx context.Context) error {
 	videoID := c.Param("videoId")
 	if videoID == "" {
 		fmt.Println("video id is empty")
@@ -115,8 +133,11 @@ breakLoop:
 		select {
 		case msg := <-msgChan:
 			data := msg.Data
-			if string(data) == "finished downloading" {
+			if string(data) == "end of process" {
 				break breakLoop
+			}
+			if string(data) == "failed to upload to gofile" {
+				return utils.RenderStream(c, view.GofileFailed(), "archive-update")
 			}
 			event := "archive-update"
 			fmt.Fprintf(c.Response().Writer, "event: %s\ndata: %s\n\n", event, data)
@@ -127,19 +148,21 @@ breakLoop:
 		}
 	}
 
-	fmt.Println("finished downloading")
-	// path := fmt.Sprintf("downloads/%s", videoID)
-	// go utils.UploadToGofile(path)
-
-	// dummy upload by sending progress to the client
-	for i := 0; i < 100; i++ {
-		event := "archive-update"
-		data := fmt.Sprintf("dummy uploading to Gofile: %d%%", i)
-		fmt.Fprintf(c.Response().Writer, "event: %s\ndata: %s\n\n", event, data)
-		c.Response().Flush()
-		time.Sleep(100 * time.Millisecond)
+	// get the url from the kv store
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	value, err := kv.Get(ctx, "id."+videoID)
+	if err != nil {
+		fmt.Println(err)
 	}
-	fmt.Println("finished uploading to Gofile")
-	url := "https://gofile.io/d/123456"
-	return utils.RenderStream(c, view.CloseSse(url), "archive-update")
+
+	if value == nil {
+		fmt.Println("value is nil")
+		return c.String(http.StatusBadRequest, "value is nil")
+	}
+
+	url := string(value.Value())
+	fmt.Println("url:", url)
+
+	return utils.RenderStream(c, view.GofileOpenButton(url), "archive-update")
 }

@@ -52,7 +52,7 @@ func main() {
 	e.POST("/archive", postArchive)
 
 	getArchive := func(c echo.Context) error {
-		return handler.GetArchive(c, nc)
+		return handler.GetArchive(c, nc, kv, ctx)
 	}
 	e.GET("/archive/:videoId", getArchive)
 

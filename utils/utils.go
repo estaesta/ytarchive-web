@@ -88,7 +88,7 @@ func curlGofile(path string, server string) (gofileResponse, error) {
 
 	client := &http.Client{}
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("https://%s.gofile.io/upload", server), form)
+		fmt.Sprintf("https://%s.gofile.io/uploadFile", server), form)
 	if err != nil {
 		log.Fatal(err)
 		return gofileResponse{}, err
@@ -119,7 +119,12 @@ func curlGofile(path string, server string) (gofileResponse, error) {
 // Upload the downloaded directory to Gofile
 func UploadToGofile(dirPath string) (string, error) {
 	// remove the directory after uploading
-	defer os.RemoveAll(dirPath)
+	defer func() {
+		err := os.RemoveAll(dirPath)
+		if err != nil {
+			fmt.Println("failed to remove directory")
+		}
+	}()
 
 	// upload the file in the directory to Gofile
 	// the directory only contains one file
@@ -134,10 +139,16 @@ func UploadToGofile(dirPath string) (string, error) {
 	filePath := filepath.Join(dirPath, entry[0].Name())
 
 	// upload the file to Gofile
+	fmt.Println("uploading to Gofile")
 	response, err := curlGofile(filePath, "store11")
 	if err != nil {
 		fmt.Println("failed to upload to Gofile")
 		return "", err
+	}
+	// check if response is ok
+	if response.Status != "ok" {
+		fmt.Println("response is not ok")
+		return "", fmt.Errorf("response is not ok")
 	}
 
 	downloadPage := response.Data.DownloadPage
@@ -147,53 +158,41 @@ func UploadToGofile(dirPath string) (string, error) {
 
 // Run yt-dlp to download the video concurrently
 // save the stdout to a buffer channel
-func DownloadVideo(url string, directory string) chan string {
-	outchan := make(chan string, 1)
+// ytarchive -v -o "archive/%(id)s/[[%(upload_date)s]_%(title)s(%(id)s)" --add-metadata -merge -w https://www.youtube.com/watch\?v\=videoId best
+func DownloadVideo(url string, directory string, outchan chan string) {
+	cmd := exec.Command("yt-dlp", "-o", directory+"/%(id)s/%(title)s.%(ext)s", url)
+	// cmd := exec.Command("./counter")
+	// cmd := exec.Command(
+	// 	"ytarchive", "-v", "-o", directory+"/%(title)s.%(ext)s",
+	// 	"--add-metadata", "-merge", "-w", url, "best")
 
-	// execute yt-dlp using goroutine
-	go func() {
-		// cmd := exec.Command("yt-dlp", "-o", directory+"/%(title)s.%(ext)s", url)
-		cmd := exec.Command("./counter")
-		// cmd := exec.Command(
-		// 	"ytarchive", "-v", "-o", directory+"/%(title)s.%(ext)s",
-		// 	"--add-metadata", "-merge", "-w", url, "best")
+	// defer close(outchan)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		fmt.Println("failed to get stdout pipe")
+	}
 
-		defer close(outchan)
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			fmt.Println("failed to get stdout pipe")
-		}
+	err = cmd.Start()
+	if err != nil {
+		fmt.Println("failed to execute yt-dlp")
+	}
 
-		err = cmd.Start()
-		if err != nil {
-			fmt.Println("failed to execute yt-dlp")
-		}
+	scanner := bufio.NewScanner(stdout)
+	scanner.Split(SplitFunc)
+	for scanner.Scan() {
+		outchan <- scanner.Text()
+	}
 
-		scanner := bufio.NewScanner(stdout)
-		scanner.Split(SplitFunc)
-		for scanner.Scan() {
-			outchan <- scanner.Text()
-		}
+	if err := scanner.Err(); err != nil {
+		fmt.Println("error reading from scanner:", err)
+	}
 
-		if err := scanner.Err(); err != nil {
-			fmt.Println("error reading from scanner:", err)
-		}
+	fmt.Println("finished reading stdout")
 
-		fmt.Println("finished reading stdout")
-
-		err = cmd.Wait()
-		if err != nil {
-			fmt.Println("failed to wait for yt-dlp")
-		}
-
-		err = stdout.Close()
-		if err != nil {
-			fmt.Println("failed to close stdout")
-		}
-
-		outchan <- "finished downloading"
-	}()
-	return outchan
+	err = cmd.Wait()
+	if err != nil {
+		fmt.Println("failed to wait for yt-dlp")
+	}
 }
 
 // Parse the url to get the video id
