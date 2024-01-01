@@ -67,6 +67,8 @@ func main() {
 	}
 	e.GET("/archive/:videoId", getArchive)
 
-	// e.Logger.Fatal(e.Start(":1323"))
+	go func() {
+		e.Logger.Fatal(e.Start(":80"))
+	}()
 	e.Logger.Fatal(e.StartAutoTLS(":443"))
 }
