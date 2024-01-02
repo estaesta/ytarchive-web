@@ -69,6 +69,7 @@ func PostArchive(c echo.Context, nc *nats.Conn, kv jetstream.KeyValue, ctx conte
 			return
 		}
 		outchan <- "finished downloading"
+		outchan <- "uploading to gofile"
 		// UploadToGofile
 		outURL, err := utils.UploadToGofile("downloads/" + videoID)
 		if err != nil {

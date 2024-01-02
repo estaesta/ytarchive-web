@@ -14,6 +14,7 @@ services:
     environment:
       - NATS_URL=nats://nats-server:4222
       - DOMAIN=<your domain>
+    restart: unless-stopped
     depends_on:
       - nats-server
     networks:
@@ -23,6 +24,7 @@ services:
     image: nats:latest
     container_name: nats-server
     command: ["--js"]
+    restart: unless-stopped
     networks:
       - go-app-network
 
