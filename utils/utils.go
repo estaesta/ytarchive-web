@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -65,7 +64,7 @@ func curlGofile(path string, server string) (gofileResponse, error) {
 	var response gofileResponse
 	// curl -F "file=@someFile" https://store1.gofile.io/upload
 	// copied from curlconverter.com
-	form := new(bytes.Buffer)
+	/* form := new(bytes.Buffer)
 	writer := multipart.NewWriter(form)
 	fw, err := writer.CreateFormFile("file", filepath.Base(path))
 	if err != nil {
@@ -84,11 +83,36 @@ func curlGofile(path string, server string) (gofileResponse, error) {
 		return gofileResponse{}, err
 	}
 
-	writer.Close()
+	writer.Close() */
+
+	r, w := io.Pipe()
+	writer := multipart.NewWriter(w)
+	go func() {
+		defer w.Close()
+		defer writer.Close()
+		fw, err := writer.CreateFormFile("file", filepath.Base(path))
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		fd, err := os.Open(path)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		defer fd.Close()
+		_, err = io.Copy(fw, fd)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+	}()
 
 	client := &http.Client{}
+	// req, err := http.NewRequest("POST",
+	// 	fmt.Sprintf("https://%s.gofile.io/uploadFile", server), form)
 	req, err := http.NewRequest("POST",
-		fmt.Sprintf("https://%s.gofile.io/uploadFile", server), form)
+		fmt.Sprintf("https://%s.gofile.io/uploadFile", server), r)
 	if err != nil {
 		log.Fatal(err)
 		return gofileResponse{}, err
@@ -137,6 +161,7 @@ func UploadToGofile(dirPath string) (string, error) {
 
 	// get the path of the file
 	filePath := filepath.Join(dirPath, entry[0].Name())
+	fmt.Println("file path:", filePath)
 
 	// upload the file to Gofile
 	fmt.Println("uploading to Gofile")

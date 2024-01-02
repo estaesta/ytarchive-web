@@ -48,7 +48,7 @@ func main() {
 		Bucket: "videoStatus",
 	})
 
-	// e.Use(middleware.Logger())
+	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Pre(middleware.HTTPSRedirect())
 	e.Static("/static", "assets")
